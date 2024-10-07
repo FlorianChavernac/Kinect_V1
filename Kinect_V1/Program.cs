@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.Azure.Kinect.BodyTracking;
 using Microsoft.Azure.Kinect.Sensor;
 
@@ -31,6 +32,7 @@ using (StreamWriter sw = new StreamWriter(fileName, true))
         // Camera calibration.
         var deviceCalibration = device.GetCalibration();
         var transformation = deviceCalibration.CreateTransformation();
+
 
 
         using (Tracker tracker = Tracker.Create(deviceCalibration, new TrackerConfiguration() { ProcessingMode = TrackerProcessingMode.Gpu, SensorOrientation = SensorOrientation.Default }))
@@ -65,8 +67,8 @@ using (StreamWriter sw = new StreamWriter(fileName, true))
                             Console.Write("Yes");
 
                             // Dimensions de l'image (720p)
-                            int width = 1280;
-                            int height = 720;
+                            int width = 320;
+                            int height = 288;
 
                             // Créer une image vide (masque)
                             Bitmap mask = new Bitmap(width, height);
@@ -109,7 +111,8 @@ using (StreamWriter sw = new StreamWriter(fileName, true))
                                 xPositions.Add(joint.Position.X);
                                 yPositions.Add(joint.Position.Y);
 
-                                var joint2D = deviceCalibration.TransformTo2D(joint.Position, CalibrationDeviceType.Depth, CalibrationDeviceType.Color);
+                                var joint2D = deviceCalibration.TransformTo2D(joint.Position, CalibrationDeviceType.Depth, CalibrationDeviceType.Depth);
+
 
                                 points.Add(new PointF(joint2D.Value.X, joint2D.Value.Y));
 
