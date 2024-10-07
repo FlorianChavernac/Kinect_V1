@@ -23,7 +23,7 @@ using (StreamWriter sw = new StreamWriter(fileName, true))
             DepthMode = DepthMode.NFOV_2x2Binned,
             SynchronizedImagesOnly = true,
             WiredSyncMode = WiredSyncMode.Standalone,
-            CameraFPS = FPS.FPS15
+            CameraFPS = FPS.FPS30
 
         });
 
@@ -111,10 +111,11 @@ using (StreamWriter sw = new StreamWriter(fileName, true))
 
                                 points.Add(new PointF(joint2D.Value.X, joint2D.Value.Y));
                             }
+                            // Obtenez les millisecondes
+                            string timestamp = currentTime.ToString("yyyy-MM-dd HH:mm:ss.fff"); // Format avec millisecondes
 
-                          
                             // Écrire le temps et les données de position dans le CSV
-                            sw.WriteLine(string.Join(";", posData));
+                            sw.WriteLine($"{timestamp};{string.Join(";", posData)}");
 
                             //Remplir le polygone dans l'image
 
