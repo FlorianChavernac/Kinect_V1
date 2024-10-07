@@ -23,7 +23,7 @@ using (StreamWriter sw = new StreamWriter(fileName, true))
             DepthMode = DepthMode.NFOV_2x2Binned,
             SynchronizedImagesOnly = true,
             WiredSyncMode = WiredSyncMode.Standalone,
-            CameraFPS = FPS.FPS30
+            CameraFPS = FPS.FPS15
 
         });
 
@@ -92,8 +92,12 @@ using (StreamWriter sw = new StreamWriter(fileName, true))
 
                             };
 
-                            float[] posData = new float[selectedJoints.Length * 3];
+                            float[] posData = new float[selectedJoints.Length * 3 + 1];
                             List<PointF> points = new List<PointF>(); // Remplacer Point par PointF
+
+                            // Obtenez l'heure actuelle
+                            var currentTime = DateTime.Now; // Vous pouvez utiliser DateTime.UtcNow si vous préférez UTC
+
                             for (int i = 0; i < selectedJoints.Length; i++)
                             {
                                 var joint = skeleton.GetJoint(selectedJoints[i]);
@@ -101,47 +105,41 @@ using (StreamWriter sw = new StreamWriter(fileName, true))
                                 // Stocker les coordonnées X, Y, Z dans le tableau posData
                                 posData[i * 3] = joint.Position.X;
                                 posData[i * 3 + 1] = joint.Position.Y;
-                                //posData[i * 3 + 2] = joint.Position.Z;
-
-
-                                
-
-
-                                // Stocker les coordonnées X, Y, Z dans le tableau posData
-                                xPositions.Add(joint.Position.X);
-                                yPositions.Add(joint.Position.Y);
+                                posData[i * 3 + 2] = joint.Position.Z;
 
                                 var joint2D = deviceCalibration.TransformTo2D(joint.Position, CalibrationDeviceType.Depth, CalibrationDeviceType.Depth);
 
-
                                 points.Add(new PointF(joint2D.Value.X, joint2D.Value.Y));
-
-                                float maxXGap = xPositions.Max() - xPositions.Min();
-                                float maxYGap = yPositions.Max() - yPositions.Min();
-
-                                sw.WriteLine(string.Join(";", posData));
-
-
-                                //sw.WriteLine(string.Join(";", posData));
-                                //Remplir le polygone dans l'image
-                                using (Graphics g = Graphics.FromImage(mask))
-                                {
-                                    g.Clear(Color.Black);  // Remplir l'image de noir (0)
-
-                                    // Définir une brosse blanche pour remplir le polygone (1)
-                                    Brush brush = new SolidBrush(Color.White);
-                                    if (points.Count > 0)
-                                    {
-                                        g.FillPolygon(brush, points.ToArray());
-                                    }
-                                }
-
-                                // Sauvegarder l'image comme fichier PNG (binaire)
-                                mask.Save(@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\masque.png");
-
-                           
-
                             }
+
+                          
+                            // Écrire le temps et les données de position dans le CSV
+                            sw.WriteLine(string.Join(";", posData));
+
+                            //Remplir le polygone dans l'image
+
+                            //using (Graphics g = Graphics.FromImage(mask))
+                            //    {
+                            //        g.Clear(Color.Black);  // Remplir l'image de noir (0)
+
+                            //        // Définir une brosse blanche pour remplir le polygone (1)
+                            //        Brush brush = new SolidBrush(Color.White);
+                            //        if (points.Count > 0)
+                            //        {
+                            //            g.FillPolygon(brush, points.ToArray());
+                            //        }
+                            //    }
+
+                            //    // Sauvegarder l'image comme fichier PNG (binaire)
+                            //    // Créer un nom de fichier unique avec un timestamp
+                            //    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                            //    string maskFileName = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\masque_{timestamp}.png";
+
+                            //    // Sauvegarder l'image avec le nom de fichier unique
+                            //    mask.Save(maskFileName);
+
+
+                        }
                         }
                         else
                         {
@@ -159,4 +157,3 @@ using (StreamWriter sw = new StreamWriter(fileName, true))
         Console.Write("\r" + new string(' ', Console.WindowWidth));
         Console.WriteLine("\rStop Recording.");
     }
-}
