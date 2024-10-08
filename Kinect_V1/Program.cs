@@ -38,6 +38,11 @@ using (Device device = Device.Open())
         };
         Console.WriteLine("Start Recording. Press Ctrl+C to stop.");
 
+        int height = deviceCalibration.DepthCameraCalibration.ResolutionHeight;
+        int width = deviceCalibration.DepthCameraCalibration.ResolutionWidth;
+
+
+
         while (isActive)
         {
             using (Capture sensorCapture = device.GetCapture())
@@ -62,8 +67,7 @@ using (Device device = Device.Open())
                         imageCount++;
 
 
-                        int height = deviceCalibration.DepthCameraCalibration.ResolutionHeight;
-                        int width = deviceCalibration.DepthCameraCalibration.ResolutionWidth;
+                      
 
                         // get body skeleton
                         var skeleton = frame.GetBodySkeleton(0);
@@ -103,7 +107,7 @@ using (Device device = Device.Open())
 
                         // Get the depth image
                         Microsoft.Azure.Kinect.Sensor.Image depthImage = frame.Capture.Depth;
-
+                        
                         // Créer un masque pour le polygone
                         Bitmap mask = new Bitmap(width, height);
 
@@ -178,7 +182,7 @@ using (Device device = Device.Open())
         {
             // Charger l'image du masque
             string maskPath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_{i + 1}.png";
-            Bitmap mask = new Bitmap(maskPath);
+            Bitmap maskRead = new Bitmap(maskPath);
 
             // Récupérer les données de profondeur associées
             ushort[] depthData = depthDataList[i]; // Les données de profondeur pour l'image actuelle
@@ -189,16 +193,16 @@ using (Device device = Device.Open())
             int countMaskPixels = 0;
 
             // Parcourir chaque pixel du masque
-            for (int y = 0; y < mask.Height; y++)
+            for (int y = 0; y < maskRead.Height; y++)
             {
-                for (int x = 0; x < mask.Width; x++)
+                for (int x = 0; x < maskRead.Width; x++)
                 {
-                    Color pixelColor = mask.GetPixel(x, y);
+                    Color pixelColor = maskRead.GetPixel(x, y);
 
                     // Si le pixel est blanc (appartenant au masque), traiter ses valeurs
                     if (pixelColor.R == 255 && pixelColor.G == 255 && pixelColor.B == 255) // Blanc
                     {
-                        int pixelIndex = y * mask.Width + x; // Index du pixel dans le tableau de profondeur
+                        int pixelIndex = y * maskRead.Width + x; // Index du pixel dans le tableau de profondeur
 
                         // Ajouter la valeur de profondeur correspondante à la somme
                         sumDepthValues += depthData[pixelIndex];
