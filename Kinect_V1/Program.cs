@@ -9,6 +9,10 @@ using Microsoft.Azure.Kinect.Sensor;
 string currentDirectory = "C:\\Users\\flori\\OneDrive\\Bureau\\Kinect_folder";
 // create a pos data file in the current directry.
 string fileName = $@"{currentDirectory}\{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")}_posdata.csv";
+//Create a header for the CSV file
+string header = "Timestamp;ShoulderLeft_X;ShoulderLeft_Y;ShoulderLeft_Z;ShoulderRight_X;ShoulderRight_Y;ShoulderRight_Z;HipRight_X;HipRight_Y;HipRight_Z;HipLeft_X;HipLeft_Y;HipLeft_Z";
+//Write the header to the CSV file
+File.WriteAllText(fileName, header + Environment.NewLine);
 
 // capture and write pos data
 using (StreamWriter sw = new StreamWriter(fileName, true))
@@ -33,11 +37,14 @@ using (StreamWriter sw = new StreamWriter(fileName, true))
         var deviceCalibration = device.GetCalibration();
         var transformation = deviceCalibration.CreateTransformation();
 
+        List<PointF> points = [];
+
 
 
         using (Tracker tracker = Tracker.Create(deviceCalibration, new TrackerConfiguration() { ProcessingMode = TrackerProcessingMode.Gpu, SensorOrientation = SensorOrientation.Default }))
         {
             var isActive = true;
+            int imageCount = 0; // Initialiser le compteur d'images
             Console.CancelKeyPress += (s, e) =>
             {
                 e.Cancel = true;
@@ -51,10 +58,11 @@ using (StreamWriter sw = new StreamWriter(fileName, true))
                 {
                     // Queue latest frame from the sensor.
                     tracker.EnqueueCapture(sensorCapture);
+                    imageCount++;
                 }
 
                 // Try getting latest tracker frame.
-                using (Frame frame = tracker.PopResult(TimeSpan.Zero, throwOnTimeout: false))
+                using (Frame frame = tracker.PopResult(TimeSpan.FromMilliseconds(400), throwOnTimeout: true))
                 {
                     if (frame != null)
                     {
@@ -66,37 +74,28 @@ using (StreamWriter sw = new StreamWriter(fileName, true))
                             Console.ForegroundColor = ConsoleColor.Green;
                             Console.Write("Yes");
 
-                            // Dimensions de l'image (720p)
+                            // Dimensions de l'image (720p) pour afficher le masque dessus
                             int width = 320;
                             int height = 288;
 
                             // Créer une image vide (masque)
-                            Bitmap mask = new Bitmap(width, height);
+                            Bitmap mask = new(width, height);
 
 
-                            // get body
+                            // get body skeleton
                             var skeleton = frame.GetBodySkeleton(0);
 
-                            // Listes pour stocker les valeurs X et Y des articulations
-                            List<float> xPositions = new List<float>();
-                            List<float> yPositions = new List<float>();
-
-                            //float[] posData = new float[(int)JointId.Count * 3];
                             // Tableau des articulations à récupérer
-                            JointId[] selectedJoints = new JointId[]
-                            {
+                            JointId[] selectedJoints =
+                            [
                                 JointId.ShoulderLeft,
                                 JointId.ShoulderRight,
                                 JointId.HipRight,
                                 JointId.HipLeft,
 
-                            };
+                            ];
 
-                            float[] posData = new float[selectedJoints.Length * 3 + 1];
-                            List<PointF> points = new List<PointF>(); // Remplacer Point par PointF
-
-                            // Obtenez l'heure actuelle
-                            var currentTime = DateTime.Now; // Vous pouvez utiliser DateTime.UtcNow si vous préférez UTC
+                            float[] posData = new float[selectedJoints.Length * 3];
 
                             for (int i = 0; i < selectedJoints.Length; i++)
                             {
@@ -111,11 +110,12 @@ using (StreamWriter sw = new StreamWriter(fileName, true))
 
                                 points.Add(new PointF(joint2D.Value.X, joint2D.Value.Y));
                             }
-                            // Obtenez les millisecondes
-                            string timestamp = currentTime.ToString("yyyy-MM-dd HH:mm:ss.fff"); // Format avec millisecondes
+
+
+                            string currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
                             // Écrire le temps et les données de position dans le CSV
-                            sw.WriteLine($"{timestamp};{string.Join(";", posData)}");
+                            sw.WriteLine($"{currentTime};{string.Join(";", posData)}");
 
                             //Remplir le polygone dans l'image
 
@@ -141,20 +141,42 @@ using (StreamWriter sw = new StreamWriter(fileName, true))
 
 
                         }
-                        }
-                        else
-                        {
-                            Console.Write("\r" + new string(' ', Console.WindowWidth));
-                            Console.Write("\rIs there person: ");
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.Write("No Person");
-                        }
-
-                        Console.ResetColor();
                     }
+                    else
+                    {
+                        Console.Write("\r" + new string(' ', Console.WindowWidth));
+                        Console.Write("\rIs there person: ");
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.Write("No Person");
+                    }
+
+                    Console.ResetColor();
                 }
             }
+            Console.WriteLine($"\rStop Recording. {imageCount} images captured."); // Afficher le nombre total d'images capturées
+
+            // Ecrire le nombre total d'images capturées dans le CSV
+            sw.WriteLine($"Total images captured: {imageCount}");
+
+
+            //Ecire dans un nouveau fichier csv les coordonnées des joints 2D contenues dans la liste points sachant que la structure de la liste est la suivante: [x1, y1, x2, y2, x3, y3, x4, y4] ou 1, 2, 3, 4 correspondent respectivement à ShoulderLeft, ShoulderRight, HipRight, HipLeft
+            string fileName2D = $@"{currentDirectory}\{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")}_posdata2D.csv";
+            string header2D = "Timestamp;ShoulderLeft_X;ShoulderLeft_Y;ShoulderRight_X;ShoulderRight_Y;HipRight_X;HipRight_Y;HipLeft_X;HipLeft_Y";
+            File.WriteAllText(fileName2D, header2D + Environment.NewLine);
+            using (StreamWriter sw2D = new StreamWriter(fileName2D, true))
+            {
+                for (int i = 0; i < points.Count; i += 4)
+                {
+                    string currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                    sw2D.WriteLine($"{currentTime};{points[i].X};{points[i].Y};{points[i + 1].X};{points[i + 1].Y};{points[i + 2].X};{points[i + 2].Y};{points[i + 3].X};{points[i + 3].Y}");
+                }
+            }
+            Console.WriteLine(
+                $"2D coordinates of joints have been saved in {fileName2D}"); // Afficher le nom du fichier CSV contenant les coordonnées 2D des joints
+
+
         }
-        Console.Write("\r" + new string(' ', Console.WindowWidth));
-        Console.WriteLine("\rStop Recording.");
     }
+    Console.Write("\r" + new string(' ', Console.WindowWidth));
+    Console.WriteLine("\rStop Recording.");
+}
