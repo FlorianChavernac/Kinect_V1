@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Azure.Kinect.BodyTracking;
 using Microsoft.Azure.Kinect.Sensor;
+using System.Diagnostics; // Ajoutez cette directive pour utiliser Stopwatch
 
 // Open device.
 using (Device device = Device.Open())
@@ -30,6 +31,10 @@ using (Device device = Device.Open())
 
     using (Tracker tracker = Tracker.Create(deviceCalibration, new TrackerConfiguration() { ProcessingMode = TrackerProcessingMode.Gpu, SensorOrientation = SensorOrientation.Default }))
     {
+        // Démarrer le chronomètre
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.Start();
+
         var isActive = true;
         int imageCount = 0;
         Console.CancelKeyPress += (s, e) =>
@@ -44,7 +49,8 @@ using (Device device = Device.Open())
 
 
 
-        while (isActive)
+        //while (isActive)
+        while (stopwatch.Elapsed < TimeSpan.FromSeconds(10)) // La boucle tourne pendant 10 secondes
         {
             using (Capture sensorCapture = device.GetCapture())
             {
@@ -67,8 +73,10 @@ using (Device device = Device.Open())
                         Console.Write("Yes");
                         imageCount++;
 
+                        points.Clear();
 
-                      
+
+
 
                         // get body skeleton
                         var skeleton = frame.GetBodySkeleton(0);
@@ -108,7 +116,7 @@ using (Device device = Device.Open())
 
                         // Get the depth image
                         Microsoft.Azure.Kinect.Sensor.Image depthImage = frame.Capture.Depth;
-                        
+
                         // Créer un masque pour le polygone
                         Bitmap mask = new Bitmap(width, height);
 
@@ -134,28 +142,28 @@ using (Device device = Device.Open())
                         double sumDepthValues = 0;
                         int countMaskPixels = 0;
 
-                        for (int y = 0; y < mask.Height; y++)
-                        {
-                            for (int x = 0; x < mask.Width; x++)
-                            {
-                                Color pixelColor = mask.GetPixel(x, y);
+                        //for (int y = 0; y < mask.Height; y++)
+                        //{
+                        //    for (int x = 0; x < mask.Width; x++)
+                        //    {
+                        //        Color pixelColor = mask.GetPixel(x, y);
 
-                                // Si le pixel est blanc (appartenant au masque)
-                                if (pixelColor.R == 255 && pixelColor.G == 255 && pixelColor.B == 255)
-                                {
-                                    int pixelIndex = y * mask.Width + x;
+                        //        // Si le pixel est blanc (appartenant au masque)
+                        //        if (pixelColor.R == 255 && pixelColor.G == 255 && pixelColor.B == 255)
+                        //        {
+                        //            int pixelIndex = y * mask.Width + x;
 
-                                    sumDepthValues += depthData[pixelIndex];
-                                    countMaskPixels++;
-                                }
-                            }
-                        }
+                        //            sumDepthValues += depthData[pixelIndex];
+                        //            countMaskPixels++;
+                        //        }
+                        //    }
+                        //}
 
-                        // Calculer la moyenne des valeurs de profondeur
-                        double meanDepthValue = (countMaskPixels > 0) ? sumDepthValues / countMaskPixels : 0;
+                        //// Calculer la moyenne des valeurs de profondeur
+                        //double meanDepthValue = (countMaskPixels > 0) ? sumDepthValues / countMaskPixels : 0;
 
-                        // Écrire la moyenne dans le fichier CSV en temps réel
-                        File.AppendAllText(meanFilePath, $"{imageCount};{meanDepthValue};{countMaskPixels}" + Environment.NewLine);
+                        //// Écrire la moyenne dans le fichier CSV en temps réel
+                        //File.AppendAllText(meanFilePath, $"{imageCount};{meanDepthValue};{countMaskPixels}" + Environment.NewLine);
 
                     }
                     else
