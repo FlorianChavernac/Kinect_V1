@@ -89,6 +89,7 @@ using (Device device = Device.Open())
                         JointId[] selectedJoints =
                         {
                             JointId.ShoulderLeft,
+                            JointId.Neck,
                             JointId.ShoulderRight,
                             JointId.HipRight,
                             JointId.HipLeft,
@@ -175,12 +176,13 @@ using (Device device = Device.Open())
 
                                 // Extraire les coordonnées 2D des articulations nécessaires
                                 PointF shoulderLeft = new PointF(float.Parse(data[1]), float.Parse(data[2]));  // X, Y de ShoulderLeft
-                                PointF shoulderRight = new PointF(float.Parse(data[4]), float.Parse(data[5])); // X, Y de ShoulderRight
-                                PointF hipRight = new PointF(float.Parse(data[7]), float.Parse(data[8]));      // X, Y de HipRight
-                                PointF hipLeft = new PointF(float.Parse(data[10]), float.Parse(data[11]));     // X, Y de HipLeft
+                                PointF neck = new PointF(float.Parse(data[4]), float.Parse(data[5]));        // X, Y de Neck
+                                PointF shoulderRight = new PointF(float.Parse(data[7]), float.Parse(data[8])); // X, Y de ShoulderRight
+                                PointF hipRight = new PointF(float.Parse(data[10]), float.Parse(data[11]));      // X, Y de HipRight
+                                PointF hipLeft = new PointF(float.Parse(data[13]), float.Parse(data[14]));     // X, Y de HipLeft
 
                                 // Liste des points formant le polygone
-                                List<PointF> polygonPoints = new List<PointF> { shoulderLeft, shoulderRight, hipRight, hipLeft };
+                                List<PointF> polygonPoints = new List<PointF> { shoulderLeft, neck, shoulderRight, hipRight, hipLeft };
 
                                 // Calculer l'aire du polygone
                                 area = CalculatePolygonArea(polygonPoints);
@@ -197,7 +199,7 @@ using (Device device = Device.Open())
                             meanDepthList.Add(meanDepthValue);
                             double volume = area * meanDepthValue;
                             volumeList.Add(volume);
-                            Console.WriteLine($"Volume pour la frame {imageCount}: {volume} mm³");
+                            Console.WriteLine($"Volume pour la frame {imageCount}: {volume/ 1000} mL");
 
 
 
@@ -224,7 +226,7 @@ using (Device device = Device.Open())
         // create a pos data file in the current directory
         string fileName = $@"{currentDirectory}\{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")}_posdata.csv";
         // create a header for the CSV file
-        string header = "Timestamp;ShoulderLeft_X;ShoulderLeft_Y;ShoulderLeft_Z;ShoulderRight_X;ShoulderRight_Y;ShoulderRight_Z;HipRight_X;HipRight_Y;HipRight_Z;HipLeft_X;HipLeft_Y;HipLeft_Z";
+        string header = "Timestamp;ShoulderLeft_X;ShoulderLeft_Y;ShoulderLeft_Z;Neck_X;Neck_Y;Neck_Z;ShoulderRight_X;ShoulderRight_Y;ShoulderRight_Z;HipRight_X;HipRight_Y;HipRight_Z;HipLeft_X;HipLeft_Y;HipLeft_Z";
 
 
         // Write the captured position data to the CSV file using the header
@@ -234,13 +236,13 @@ using (Device device = Device.Open())
 
         // Write 2D joint coordinates to a new CSV file
         string fileName2D = $@"{currentDirectory}\{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")}_posdata2D.csv";
-        string header2D = "ShoulderLeft_X;ShoulderLeft_Y;ShoulderRight_X;ShoulderRight_Y;HipRight_X;HipRight_Y;HipLeft_X;HipLeft_Y";
+        string header2D = "ShoulderLeft_X;ShoulderLeft_Y;Neck_X;Neck_Y;ShoulderRight_X;ShoulderRight_Y;HipRight_X;HipRight_Y;HipLeft_X;HipLeft_Y";
         File.WriteAllText(fileName2D, header2D + Environment.NewLine);
         using (StreamWriter sw2D = new StreamWriter(fileName2D, true))
         {
-            for (int i = 0; i < pointsCSV.Count; i += 4)
+            for (int i = 0; i < pointsCSV.Count; i += 5)
             {
-                sw2D.WriteLine($"{pointsCSV[i].X};{pointsCSV[i].Y};{pointsCSV[i + 1].X};{pointsCSV[i + 1].Y};{pointsCSV[i + 2].X};{pointsCSV[i + 2].Y};{pointsCSV[i + 3].X};{pointsCSV[i + 3].Y}");
+                sw2D.WriteLine($"{pointsCSV[i].X};{pointsCSV[i].Y};{pointsCSV[i + 1].X};{pointsCSV[i + 1].Y};{pointsCSV[i + 2].X};{pointsCSV[i + 2].Y};{pointsCSV[i + 3].X};{pointsCSV[i + 3].Y};{pointsCSV[i + 4].X};{pointsCSV[i + 4].Y}");
             }
             Console.WriteLine($"2D coordinates of joints have been saved in {fileName2D}");
 
@@ -254,7 +256,7 @@ using (Device device = Device.Open())
         {
             double meanDepthValue = meanDepthList[i];
             double volume = volumeList[i];
-            File.AppendAllText(meanFilePath, $"{i + 1};{meanDepthValue};{countMaskPixels};{area};{volume};{volume/1e6}" + Environment.NewLine);
+            File.AppendAllText(meanFilePath, $"{i + 1};{meanDepthValue};{countMaskPixels};{area};{volume};{volume / 1e6}" + Environment.NewLine);
             //Console.WriteLine($"Moyenne des valeurs de profondeur pour le masque {i + 1} ajoutée au fichier.");
         }
 
