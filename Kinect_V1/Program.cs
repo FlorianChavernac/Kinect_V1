@@ -49,7 +49,7 @@ using (Device device = Device.Open())
 
 
         //while (isActive)
-        while (stopwatch.Elapsed < TimeSpan.FromSeconds(5)) // La boucle tourne pendant 10 secondes
+        while (stopwatch.Elapsed < TimeSpan.FromSeconds(30)) // La boucle tourne pendant 10 secondes
         {
             using (Capture sensorCapture = device.GetCapture())
             {
@@ -218,7 +218,7 @@ using (Device device = Device.Open())
         for (int i = 0; i < imageCount; i++)
         {
             // Charger l'image du masque
-            string maskPath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_{i + 1}.png";
+            string maskPath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_59.png";
             Bitmap maskRead = new Bitmap(maskPath);
             //TODO : charger l'image avec une résolution particulière
 
@@ -259,7 +259,7 @@ using (Device device = Device.Open())
             double meanDepthValue = (countMaskPixels > 0) ? sumDepthValues / countMaskPixels : 0;
 
             // Exemple pour une seule entrée de skeletonPositionData
-            string[] data = skeletonPositionData[0].Split(';'); // On utilise la première entrée (index 0)
+            string[] data = skeletonPositionData[59].Split(';'); // On utilise la première entrée (index 0)
 
             // Extraire les coordonnées 2D des articulations nécessaires
             PointF shoulderLeft = new PointF(float.Parse(data[1]), float.Parse(data[2]));  // X, Y de ShoulderLeft
