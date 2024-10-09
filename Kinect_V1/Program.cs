@@ -1,6 +1,4 @@
 ﻿using System.Drawing;
-using System.Reflection;
-using System.Runtime.InteropServices;
 using Microsoft.Azure.Kinect.BodyTracking;
 using Microsoft.Azure.Kinect.Sensor;
 using System.Diagnostics; // Ajoutez cette directive pour utiliser Stopwatch
@@ -24,7 +22,8 @@ using (Device device = Device.Open())
 
     // list to store the position data 3D
     List<string> skeletonPositionData = new List<string>();
-    List<PointF> points = new List<PointF>();
+    List<PointF> points = new List<PointF>(); // points pour tracer le polygone mais remis à zéro à chaque frame donc nouvelle liste pour écrire le fichier CSV
+    List<PointF> pointsCSV = new List<PointF>();
     List<ushort[]> depthDataList = new List<ushort[]>();
     string meanFilePath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\depth_means.csv";
 
@@ -50,7 +49,7 @@ using (Device device = Device.Open())
 
 
         //while (isActive)
-        while (stopwatch.Elapsed < TimeSpan.FromSeconds(10)) // La boucle tourne pendant 10 secondes
+        while (stopwatch.Elapsed < TimeSpan.FromSeconds(5)) // La boucle tourne pendant 10 secondes
         {
             using (Capture sensorCapture = device.GetCapture())
             {
@@ -131,16 +130,21 @@ using (Device device = Device.Open())
                             }
                         }
 
+                        pointsCSV.AddRange(points);
+
                         // Sauvegarder une image pour chaque frame dans un dossier bin
                         mask.Save($@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_{imageCount}.png");
 
                         // Accéder aux données brutes de l'image de profondeur
                         ushort[] depthData = depthImage.GetPixels<ushort>().ToArray();
 
+                        depthDataList.Add(depthData);
+
+
                         // Calculer la moyenne de profondeur en temps réel pour chaque masque
-                        int sumMaskPixels = 0;
-                        double sumDepthValues = 0;
-                        int countMaskPixels = 0;
+                        //int sumMaskPixels = 0;
+                        //double sumDepthValues = 0;
+                        //int countMaskPixels = 0;
 
                         //for (int y = 0; y < mask.Height; y++)
                         //{
@@ -199,69 +203,106 @@ using (Device device = Device.Open())
         File.WriteAllText(fileName2D, header2D + Environment.NewLine);
         using (StreamWriter sw2D = new StreamWriter(fileName2D, true))
         {
-            for (int i = 0; i < points.Count; i += 4)
+            for (int i = 0; i < pointsCSV.Count; i += 4)
             {
-                sw2D.WriteLine($"{points[i].X};{points[i].Y};{points[i + 1].X};{points[i + 1].Y};{points[i + 2].X};{points[i + 2].Y};{points[i + 3].X};{points[i + 3].Y}");
+                sw2D.WriteLine($"{pointsCSV[i].X};{pointsCSV[i].Y};{pointsCSV[i + 1].X};{pointsCSV[i + 1].Y};{pointsCSV[i + 2].X};{pointsCSV[i + 2].Y};{pointsCSV[i + 3].X};{pointsCSV[i + 3].Y}");
             }
             Console.WriteLine($"2D coordinates of joints have been saved in {fileName2D}");
 
         }
 
-        //// Créer un fichier CSV pour stocker les moyennes des valeurs de profondeur pour chaque masque
-        //string meanFilePath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\depth_means.csv";
+        // Ajouter un en-tête au fichier CSV
+        File.WriteAllText(meanFilePath, "MaskIndex;MeanDepthValue;PixelCount;Area;Volume" + Environment.NewLine);
 
-        //// Ajouter un en-tête au fichier CSV
-        //File.WriteAllText(meanFilePath, "MaskIndex;MeanDepthValue;PixelCount" + Environment.NewLine);
+        // Boucle pour traiter chaque masque et ses données de profondeur
+        for (int i = 0; i < imageCount; i++)
+        {
+            // Charger l'image du masque
+            string maskPath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_{i + 1}.png";
+            Bitmap maskRead = new Bitmap(maskPath);
+            //TODO : charger l'image avec une résolution particulière
 
-        //// Boucle pour traiter chaque masque et ses données de profondeur
-        //for (int i = 0; i < imageCount; i++)
-        //{
-        //    // Charger l'image du masque
-        //    string maskPath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_{i + 1}.png";
-        //    Bitmap maskRead = new Bitmap(maskPath);
-
-        //    // Récupérer les données de profondeur associées
-        //    ushort[] depthData = depthDataList[i]; // Les données de profondeur pour l'image actuelle
-
-        //    // Initialiser les variables pour la somme des pixels et la somme des valeurs de profondeur
-        //    int sumMaskPixels = 0;
-        //    double sumDepthValues = 0;
-        //    int countMaskPixels = 0;
-
-        //    // Parcourir chaque pixel du masque
-        //    for (int y = 0; y < maskRead.Height; y++)
-        //    {
-        //        for (int x = 0; x < maskRead.Width; x++)
-        //        {
-        //            Color pixelColor = maskRead.GetPixel(x, y);
-
-        //            // Si le pixel est blanc (appartenant au masque), traiter ses valeurs
-        //            if (pixelColor.R == 255 && pixelColor.G == 255 && pixelColor.B == 255) // Blanc
-        //            {
-        //                int pixelIndex = y * maskRead.Width + x; // Index du pixel dans le tableau de profondeur
-
-        //                // Ajouter la valeur de profondeur correspondante à la somme
-        //                sumDepthValues += depthData[pixelIndex];
-
-        //                // Ajouter un à la somme des pixels du masque
-        //                sumMaskPixels += 1;
-        //                countMaskPixels++;
-        //            }
-        //        }
-        //    }
-
-        //    // Calculer la moyenne des valeurs de profondeur dans le masque
-        //    double meanDepthValue = (countMaskPixels > 0) ? sumDepthValues / countMaskPixels : 0;
-
-        //    // Écrire la moyenne dans le fichier CSV
-        //    File.AppendAllText(meanFilePath, $"{i + 1};{meanDepthValue};{countMaskPixels}" + Environment.NewLine);
-        //    //Console.WriteLine($"Moyenne des valeurs de profondeur pour le masque {i + 1} ajoutée au fichier.");
-        //}
-
-        //Console.WriteLine($"Toutes les moyennes des masques ont été sauvegardées dans {meanFilePath}");
+            // Récupérer les données de profondeur associées
+            ushort[] depthData = depthDataList[i]; // Les données de profondeur pour l'image actuelle
 
 
+            // Initialiser les variables pour la somme des pixels et la somme des valeurs de profondeur
+            int sumMaskPixels = 0;
+            double sumDepthValues = 0;
+            int countMaskPixels = 0;
+            //console la résolution de l'image
+            Console.WriteLine($"Resolution of the mask {i + 1} : {maskRead.Width}x{maskRead.Height}");
+
+            // Parcourir chaque pixel du masque
+            for (int y = 0; y < maskRead.Height; y++)
+            {
+                for (int x = 0; x < maskRead.Width; x++)
+                {
+                    Color pixelColor = maskRead.GetPixel(x, y);
+
+                    // Si le pixel est blanc (appartenant au masque), traiter ses valeurs
+                    if (pixelColor.R == 255 && pixelColor.G == 255 && pixelColor.B == 255) // Blanc
+                    {
+                        int pixelIndex = y * maskRead.Width + x; // Index du pixel dans le tableau de profondeur
+
+                        // Ajouter la valeur de profondeur correspondante à la somme
+                        sumDepthValues += depthData[pixelIndex];
+
+                        // Ajouter un à la somme des pixels du masque
+                        sumMaskPixels += 1;
+                        countMaskPixels++;
+                    }
+                }
+            }
+
+            // Calculer la moyenne des valeurs de profondeur dans le masque
+            double meanDepthValue = (countMaskPixels > 0) ? sumDepthValues / countMaskPixels : 0;
+
+            // Exemple pour une seule entrée de skeletonPositionData
+            string[] data = skeletonPositionData[0].Split(';'); // On utilise la première entrée (index 0)
+
+            // Extraire les coordonnées 2D des articulations nécessaires
+            PointF shoulderLeft = new PointF(float.Parse(data[1]), float.Parse(data[2]));  // X, Y de ShoulderLeft
+            PointF shoulderRight = new PointF(float.Parse(data[4]), float.Parse(data[5])); // X, Y de ShoulderRight
+            PointF hipRight = new PointF(float.Parse(data[7]), float.Parse(data[8]));      // X, Y de HipRight
+            PointF hipLeft = new PointF(float.Parse(data[10]), float.Parse(data[11]));     // X, Y de HipLeft
+
+            // Liste des points formant le polygone
+            List<PointF> polygonPoints = new List<PointF> { shoulderLeft, shoulderRight, hipRight, hipLeft };
+
+            // Calculer l'aire du polygone
+            double area = CalculatePolygonArea(polygonPoints);
+
+            double volume = area * meanDepthValue;
+
+
+            // Écrire la moyenne dans le fichier CSV
+            File.AppendAllText(meanFilePath, $"{i + 1};{meanDepthValue};{countMaskPixels};{area};{volume}" + Environment.NewLine);
+            //Console.WriteLine($"Moyenne des valeurs de profondeur pour le masque {i + 1} ajoutée au fichier.");
+        }
+
+        Console.WriteLine($"Toutes les moyennes des masques ont été sauvegardées dans {meanFilePath}");
+
+
+
+        // TODO calcul de l'air du polygone
     }
 }
 Console.Write("\r" + new string(' ', Console.WindowWidth));
 Console.WriteLine("\rStop Recording.");
+
+static double CalculatePolygonArea(List<PointF> points)
+{
+    int n = points.Count;
+    double area = 0;
+
+    for (int i = 0; i < n - 1; i++)
+    {
+        area += points[i].X * points[i + 1].Y - points[i + 1].X * points[i].Y;
+    }
+
+    // Add the last term
+    area += points[n - 1].X * points[0].Y - points[0].X * points[n - 1].Y;
+
+    return Math.Abs(area) / 2;
+}
