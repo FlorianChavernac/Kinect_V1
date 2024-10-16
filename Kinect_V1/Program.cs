@@ -132,20 +132,6 @@ using (NetworkStream stream = client.GetStream())
                             // Get the depth image
                             Microsoft.Azure.Kinect.Sensor.Image depthImage = frame.Capture.Depth;
 
-                            // Créer un masque pour le polygone
-                            Bitmap mask = new Bitmap(width, height);
-
-                            using (Graphics g = Graphics.FromImage(mask))
-                            {
-                                g.Clear(Color.Black);  // Remplir l'image de noir (0)
-                                Brush brush = new SolidBrush(Color.White); // Brosse blanche pour remplir le polygone (1)
-
-                                if (points.Count > 0)
-                                {
-                                    g.FillPolygon(brush, points.ToArray()); // Dessiner le polygone
-                                }
-                            }
-
                             pointsCSV.AddRange(points);
 
                             // Accéder aux données brutes de l'image de profondeur
@@ -153,14 +139,26 @@ using (NetworkStream stream = client.GetStream())
 
                             depthDataList.Add(depthData);
 
-                            // Sauvegarder une image pour chaque frame dans un dossier bin
-                            mask.Save($@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_{imageCount}.png");
                             if (imageCount > 59)
                             {
                                 if (drapRealTime == false)
                                 {
                                     //Calcule l'aide du masque une seule fois
                                     drapRealTime = true;
+
+                                    // Créer un masque pour le polygone
+                                    Bitmap mask = new Bitmap(width, height);
+
+                                    using (Graphics g = Graphics.FromImage(mask))
+                                    {
+                                        g.Clear(Color.Black);  // Remplir l'image de noir (0)
+                                        Brush brush = new SolidBrush(Color.White); // Brosse blanche pour remplir le polygone (1)
+
+                                        if (points.Count > 0)
+                                        {
+                                            g.FillPolygon(brush, points.ToArray()); // Dessiner le polygone
+                                        }
+                                    }
                                     string maskPath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_59.png";
                                     Bitmap maskRead = new Bitmap(maskPath);
                                     // Parcourir chaque pixel du masque pour sauvegarder les coordonnées des pixels dans une liste
