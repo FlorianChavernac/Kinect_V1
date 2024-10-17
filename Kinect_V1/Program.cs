@@ -1,6 +1,7 @@
 ﻿using System.Drawing;
 using System.Net.Sockets;
 using System.Text;
+using K4AdotNet;
 using K4AdotNet.BodyTracking;
 using K4AdotNet.Record;
 using Microsoft.Azure.Kinect.BodyTracking;
@@ -22,7 +23,8 @@ List<double> meanDepthList = new List<double>();
 string server = "127.0.0.1";  // Adresse IP de ton script Python
 int port = 5000;  // Port utilisé par le serveur socket côté Python
 
-using (TcpClient client = new TcpClient(server, port))
+using (
+    TcpClient client = new TcpClient(server, port))
 using (NetworkStream stream = client.GetStream())
 {
 
@@ -41,6 +43,7 @@ using (NetworkStream stream = client.GetStream())
         // Utiliser la configuration (afficher certaines informations par exemple)
         Console.WriteLine($"Depth Mode: {recordConfig.DepthMode}");
         Console.WriteLine($"Color Resolution: {recordConfig.ColorResolution}");
+        Console.WriteLine($"Color Format: {recordConfig.StartTimeOffset}");
 
 
         // Déclaration de la variable pour stocker la capture
@@ -54,7 +57,7 @@ using (NetworkStream stream = client.GetStream())
 
             int height = deviceCalibration.DepthCameraCalibration.ResolutionHeight;
             int width = deviceCalibration.DepthCameraCalibration.ResolutionWidth;
-
+            playback.SeekTimestamp(Microseconds64.FromSeconds(18), PlaybackSeekOrigin.Begin);
 
             //check if the playback has a next frame
             while (playback.TryGetNextCapture(out sensorCapture))
@@ -237,14 +240,14 @@ using (NetworkStream stream = client.GetStream())
             }
 
             // Ajouter un en-tête au fichier CSV
-            File.WriteAllText(meanFilePath, "MaskIndex;MeanDepthValue;PixelCount;Area;Volume;Volume en L" + Environment.NewLine);
+            File.WriteAllText(meanFilePath, "MaskIndex;MeanDepthValue;PixelCount;Area;Volume;Volume en mL" + Environment.NewLine);
 
             // Boucle pour traiter chaque masque et ses données de profondeur
             for (int i = 0; i < meanDepthList.Count; i++)
             {
                 double meanDepthValue = meanDepthList[i];
                 double volume = volumeList[i];
-                File.AppendAllText(meanFilePath, $"{i + 1};{meanDepthValue};{countMaskPixels};{area};{volume};{volume / 1e6}" + Environment.NewLine);
+                File.AppendAllText(meanFilePath, $"{i + 1};{meanDepthValue};{countMaskPixels};{area};{volume};{volume / 1000}" + Environment.NewLine);
                 //Console.WriteLine($"Moyenne des valeurs de profondeur pour le masque {i + 1} ajoutée au fichier.");
             }
 
