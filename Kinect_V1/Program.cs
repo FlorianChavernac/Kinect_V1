@@ -1,154 +1,127 @@
 ﻿using System.Drawing;
-using Microsoft.Azure.Kinect.BodyTracking;
-using Microsoft.Azure.Kinect.Sensor;
-using System.Diagnostics; // Ajoutez cette directive pour utiliser Stopwatch
 using System.Net.Sockets;
 using System.Text;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using K4AdotNet.BodyTracking;
+using K4AdotNet.Record;
+using Microsoft.Azure.Kinect.BodyTracking;
+using Microsoft.Azure.Kinect.Sensor;
+
+var mkvPath = $@"C:\Users\flori\OneDrive\Bureau\CHU_St_Justine\005-Device-0-04-05-2024-15-05-41.mkv";
+
+// list to store the position data 3D
+List<string> skeletonPositionData = new List<string>();
+List<PointF> points = new List<PointF>(); // points pour tracer le polygone mais remis à zéro à chaque frame donc nouvelle liste pour écrire le fichier CSV
+List<PointF> pointsCSV = new List<PointF>();
+string meanFilePath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\depth_means.csv";
+int countMaskPixels = 0;
+List<int> pixelsIndexMask = new List<int>();
+double area = 0;
+List<double> volumeList = new List<double>();
+List<double> meanDepthList = new List<double>();
 
 string server = "127.0.0.1";  // Adresse IP de ton script Python
 int port = 5000;  // Port utilisé par le serveur socket côté Python
 
-
 using (TcpClient client = new TcpClient(server, port))
 using (NetworkStream stream = client.GetStream())
 {
-    // Open device.
-    using (Device device = Device.Open())
+
+    using (var playback = new Playback(mkvPath))
     {
-        device.StartCameras(new DeviceConfiguration()
+        // Déclaration de la variable pour stocker la configuration
+        RecordConfiguration recordConfig;
+
+        // Récupérer la configuration d'enregistrement
+        playback.GetRecordConfiguration(out recordConfig);
+
+        //get sensor.calibration
+        K4AdotNet.Sensor.Calibration deviceCalibration;
+        playback.GetCalibration(out deviceCalibration);
+
+        // Utiliser la configuration (afficher certaines informations par exemple)
+        Console.WriteLine($"Depth Mode: {recordConfig.DepthMode}");
+        Console.WriteLine($"Color Resolution: {recordConfig.ColorResolution}");
+
+
+        // Déclaration de la variable pour stocker la capture
+        K4AdotNet.Sensor.Capture sensorCapture;
+
+        using (K4AdotNet.BodyTracking.Tracker tracker = new(deviceCalibration, new K4AdotNet.BodyTracking.TrackerConfiguration() { ProcessingMode = K4AdotNet.BodyTracking.TrackerProcessingMode.Gpu, SensorOrientation = K4AdotNet.BodyTracking.SensorOrientation.Default }))
+
         {
-            ColorFormat = ImageFormat.ColorBGRA32,
-            ColorResolution = ColorResolution.R720p,
-            DepthMode = DepthMode.NFOV_2x2Binned,
-            SynchronizedImagesOnly = true,
-            WiredSyncMode = WiredSyncMode.Standalone,
-            CameraFPS = FPS.FPS30
-        });
-
-        // Camera calibration.
-        var deviceCalibration = device.GetCalibration();
-        var transformation = deviceCalibration.CreateTransformation();
-
-        // list to store the position data 3D
-        List<string> skeletonPositionData = new List<string>();
-        List<PointF> points = new List<PointF>(); // points pour tracer le polygone mais remis à zéro à chaque frame donc nouvelle liste pour écrire le fichier CSV
-        List<PointF> pointsCSV = new List<PointF>();
-        List<ushort[]> depthDataList = new List<ushort[]>();
-        string meanFilePath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\depth_means.csv";
-        bool drapRealTime = false;
-        int countMaskPixels = 0;
-        List<int> pixelsIndexMask = new List<int>();
-        double area = 0;
-        List<double> volumeList = new List<double>();
-        List<double> meanDepthList = new List<double>();
-
-
-
-        using (Tracker tracker = Tracker.Create(deviceCalibration, new TrackerConfiguration() { ProcessingMode = TrackerProcessingMode.Gpu, SensorOrientation = SensorOrientation.Default }))
-        {
-            // Démarrer le chronomètre
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
-
-            var isActive = true;
             int imageCount = 0;
-            Console.CancelKeyPress += (s, e) =>
-            {
-                e.Cancel = true;
-                isActive = false;
-            };
             Console.WriteLine("Start Recording. Press Ctrl+C to stop.");
 
             int height = deviceCalibration.DepthCameraCalibration.ResolutionHeight;
             int width = deviceCalibration.DepthCameraCalibration.ResolutionWidth;
 
 
-
-            //while (isActive)
-            while (stopwatch.Elapsed < TimeSpan.FromSeconds(32)) // La boucle tourne pendant 10 secondes
+            //check if the playback has a next frame
+            while (playback.TryGetNextCapture(out sensorCapture))
             {
-                using (Capture sensorCapture = device.GetCapture())
-                {
-                    // Queue latest frame from the sensor.
-                    tracker.EnqueueCapture(sensorCapture);
-                    //imageCount++;
-                }
+                tracker.EnqueueCapture(sensorCapture);
 
-                // Try getting the latest tracker frame.
-                using (Frame frame = tracker.PopResult(TimeSpan.FromMilliseconds(400), throwOnTimeout: true))
+                // Process the capture
+                using (BodyFrame frame = tracker.PopResult())
                 {
                     if (frame != null)
                     {
-                        // Is there a person?
-                        if (frame.NumberOfBodies > 0)
+                        if (frame.BodyCount > 0)
                         {
-                            Console.Write("\r" + new string(' ', Console.WindowWidth));
-                            Console.Write("\rIs there a person: ");
                             Console.ForegroundColor = ConsoleColor.Green;
-                            Console.Write("Yes");
+                            Console.WriteLine("Body detected");
                             imageCount++;
-
                             points.Clear();
 
+                            //get body skeleton
+                            K4AdotNet.BodyTracking.Skeleton skeleton;
+                            frame.GetBodySkeleton(0, out skeleton);
 
-                            // get body skeleton
-                            var skeleton = frame.GetBodySkeleton(0);
-
-                            // joints to track
-                            JointId[] selectedJoints =
+                            //Array of joint to track
+                            K4AdotNet.BodyTracking.JointType[] selectedJoints =
                             {
-                            JointId.ShoulderLeft,
-                            JointId.Neck,
-                            JointId.ShoulderRight,
-                            JointId.HipRight,
-                            JointId.HipLeft,
-                        };
-
+                                JointType.ShoulderLeft,
+                                JointType.Neck,
+                                JointType.ShoulderRight,
+                                JointType.HipRight,
+                                JointType.HipLeft,
+                            };
                             float[] posData = new float[selectedJoints.Length * 3];
 
                             for (int i = 0; i < selectedJoints.Length; i++)
                             {
-                                var joint = skeleton.GetJoint(selectedJoints[i]);
-
-                                // store X, Y, Z coordinates in posData array
-                                posData[i * 3] = joint.Position.X;
-                                posData[i * 3 + 1] = joint.Position.Y;
-                                posData[i * 3 + 2] = joint.Position.Z;
+                                var joint = skeleton[selectedJoints[i]];
+                                posData[i * 3] = joint.PositionMm.X;
+                                posData[i * 3 + 1] = joint.PositionMm.Y;
+                                posData[i * 3 + 2] = joint.PositionMm.Z;
 
                                 //Transform the 3D joint position to 2D pixel coordinates using the depth camera
-                                var joint2D = deviceCalibration.TransformTo2D(joint.Position, CalibrationDeviceType.Depth, CalibrationDeviceType.Depth);
+                                var joint2D = deviceCalibration.Convert3DTo2D(joint.PositionMm, K4AdotNet.Sensor.CalibrationGeometry.Depth, K4AdotNet.Sensor.CalibrationGeometry.Depth);
                                 points.Add(new PointF(joint2D.Value.X, joint2D.Value.Y));
-
                             }
 
                             //string currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                            string currentTime = frame.Capture.Depth.DeviceTimestamp.ToString();
+                            string currentTime = frame.DeviceTimestamp.ToString();
 
                             // Add the timestamp and position data to the list
                             skeletonPositionData.Add($"{currentTime};{string.Join(";", posData)}");
 
 
-                            // Get the depth image
-                            Microsoft.Azure.Kinect.Sensor.Image depthImage = frame.Capture.Depth;
+                            // Get the depth image from the body frame
+                            var depthImage = frame.Capture.DepthImage;
 
-                            pointsCSV.AddRange(points);
-
-                            // Accéder aux données brutes de l'image de profondeur
-                            ushort[] depthData = depthImage.GetPixels<ushort>().ToArray();
-
-                            depthDataList.Add(depthData);
+                            // récupérer les données de profondeur
+                            short[] depthData = new short[height * width];
+                            depthImage.CopyTo(dst: depthData);
 
                             if (imageCount > 59)
                             {
-                                if (drapRealTime == false)
+                                if (imageCount == 60)
                                 {
-                                    //Calcule l'aide du masque une seule fois
-                                    drapRealTime = true;
+                                    //Calcule l'aide du masque qu'une seule fois
 
                                     // Créer un masque pour le polygone
                                     Bitmap mask = new Bitmap(width, height);
-
                                     using (Graphics g = Graphics.FromImage(mask))
                                     {
                                         g.Clear(Color.Black);  // Remplir l'image de noir (0)
@@ -159,7 +132,8 @@ using (NetworkStream stream = client.GetStream())
                                             g.FillPolygon(brush, points.ToArray()); // Dessiner le polygone
                                         }
                                     }
-                                    string maskPath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_59.png";
+                                    mask.Save($@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_{imageCount}.png");
+                                    string maskPath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_60.png";
                                     Bitmap maskRead = new Bitmap(maskPath);
                                     // Parcourir chaque pixel du masque pour sauvegarder les coordonnées des pixels dans une liste
                                     for (int y = 0; y < maskRead.Height; y++)
@@ -215,22 +189,15 @@ using (NetworkStream stream = client.GetStream())
                                 byte[] message = Encoding.ASCII.GetBytes(formattedNumber + "\n");
                                 // Envoi de la donnée au script Python
                                 stream.Write(message);
-
-
+                            }
+                            else
+                            {
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.Write("No Person");
 
                             }
-
-
+                            Console.ResetColor();
                         }
-                        else
-                        {
-                            Console.Write("\r" + new string(' ', Console.WindowWidth));
-                            Console.Write("\rIs there a person: ");
-                            Console.ForegroundColor = ConsoleColor.Red;
-                            Console.Write("No Person");
-                        }
-
-                        Console.ResetColor();
                     }
                 }
             }
@@ -287,7 +254,6 @@ using (NetworkStream stream = client.GetStream())
     Console.Write("\r" + new string(' ', Console.WindowWidth));
     Console.WriteLine("\rStop Recording.");
 }
-
 static double CalculatePolygonArea(List<PointF> points)
 {
     int n = points.Count;
