@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Net.Sockets;
 using System.Text;
 using K4AdotNet;
@@ -207,6 +208,34 @@ using (NetworkStream stream = client.GetStream())
                                                 }
                                             }
                                         }
+
+                                        // store the body index map
+                                        string bodyIndexMapPath = $@"{basePath}\bodyIndexMap_{imageCount}.png";
+                                        var bodyIndexMap = frame.BodyIndexMap;
+                                        byte[] bodyIndexData = new byte[bodyIndexMap.SizeBytes];
+                                        bodyIndexMap.CopyTo(dst: bodyIndexData);
+                                        long bodyIndexBufferSize = bodyIndexMap.SizeBytes;
+
+                                        // Get the width and height of the body index map
+                                        int width_2 = bodyIndexMap.WidthPixels;
+                                        int height_2 = bodyIndexMap.HeightPixels;
+
+                                        // Create a bitmap to store the image
+                                        using (Bitmap bitmap = new Bitmap(width_2, height_2, PixelFormat.Format8bppIndexed))
+                                        {
+                                            // Lock the bits of the image to access the pixel data
+                                            BitmapData bmpData = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), ImageLockMode.WriteOnly, bitmap.PixelFormat);
+
+                                            // Copy the body index data into the bitmap's buffer
+                                            System.Runtime.InteropServices.Marshal.Copy(bodyIndexData, 0, bmpData.Scan0, (int)bodyIndexBufferSize);
+
+                                            // Unlock the bits of the image
+                                            bitmap.UnlockBits(bmpData);
+
+                                            // Save the bitmap as a PNG file
+                                            bitmap.Save(bodyIndexMapPath);
+                                        }
+
                                         // Exemple pour une seule entrée de skeletonPositionData
                                         string[] data = skeletonPositionData[59].Split(';'); // On utilise la première entrée (index 0)
 
