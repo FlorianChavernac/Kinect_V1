@@ -33,6 +33,14 @@ bool connected = false;
 string pythonExePath = "python"; // fonctionne seulement si python est dans le path
 string scriptPath = $@"C:\Users\flori\source\repos\Kinect_V1\Kinect_V1\Python_scripts\socket_plot.py";
 
+//demander l'endroit où le fichier Python est sauvegardé
+Console.WriteLine("Entrez le chemin où le fichier Python est sauvegardé :");
+string userPathPython = Console.ReadLine();
+if (userPathPython != "")
+{
+    scriptPath = userPathPython;
+}
+
 // Créer un nouvel objet Process
 ProcessStartInfo start = new ProcessStartInfo();
 start.FileName = pythonExePath;
