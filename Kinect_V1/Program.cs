@@ -11,6 +11,7 @@ using Microsoft.Azure.Kinect.Sensor;
 var mkvPath = $@"C:\Users\flori\OneDrive\Bureau\CHU_St_Justine\005-Device-0-04-05-2024-15-05-41.mkv";
 
 List<PointF> points = new List<PointF>(); // points pour tracer le polygone mais remis à zéro à chaque frame donc nouvelle liste pour écrire le fichier CSV
+List<PointF> pointsRGB = new List<PointF>();
 List<string> skeletonPositionData = new List<string>();
 int countMaskPixels = 0;
 List<int> pixelsIndexMask = new List<int>();
@@ -51,7 +52,7 @@ using (NetworkStream stream = client.GetStream())
             // Utiliser la configuration (afficher certaines informations par exemple)
             Console.WriteLine($"Depth Mode: {recordConfig.DepthMode}");
             Console.WriteLine($"Color Resolution: {recordConfig.ColorResolution}");
-            Console.WriteLine($"Color Format: {recordConfig.StartTimeOffset}");
+            Console.WriteLine($"Color Resolution: {recordConfig.ColorFormat}");
 
 
             // Déclaration de la variable pour stocker la capture
@@ -105,7 +106,9 @@ using (NetworkStream stream = client.GetStream())
 
                                     //Transform the 3D joint position to 2D pixel coordinates using the depth camera
                                     var joint2D = deviceCalibration.Convert3DTo2D(joint.PositionMm, K4AdotNet.Sensor.CalibrationGeometry.Depth, K4AdotNet.Sensor.CalibrationGeometry.Depth);
+                                    var jointRGB = deviceCalibration.Convert3DTo2D(joint.PositionMm, K4AdotNet.Sensor.CalibrationGeometry.Depth, K4AdotNet.Sensor.CalibrationGeometry.Color);
                                     points.Add(new PointF(joint2D.Value.X, joint2D.Value.Y));
+                                    pointsRGB.Add(new PointF(jointRGB.Value.X, jointRGB.Value.Y));
                                 }
 
                                 //string currentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
@@ -141,6 +144,42 @@ using (NetworkStream stream = client.GetStream())
                                             }
                                         }
                                         mask.Save($@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_{imageCount}.png");
+
+
+                                        // Créer un masque pour le polygone
+                                        //Get the RGB capture
+                                        var colorImage = frame.Capture.ColorImage;
+
+                                        // Get the color data
+                                        byte[] colorData = new byte[colorImage.SizeBytes];
+                                        colorImage.CopyTo(dst: colorData);
+                                        string rgbname = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\rgb.jpg";
+                                        long imageBufferSize = colorImage.SizeBytes;
+
+                                        using (FileStream fileObject = new FileStream(rgbname, FileMode.Create, FileAccess.Write))
+                                        {
+                                            fileObject.Write(colorData, 0, (int)imageBufferSize);
+                                        }
+
+                                        // Charger l'image RGB après l'enregistrement
+                                        Bitmap rgbImage = new(rgbname);
+
+                                        // Créer un masque pour le polygone en utilisant l'image RGB comme fond
+                                        using (Graphics g = Graphics.FromImage(rgbImage))
+                                        {
+
+                                            Brush brush = new SolidBrush(Color.White); // Brosse blanche pour remplir le polygone (1)
+
+                                            if (pointsRGB.Count > 0)
+                                            {
+                                                g.FillPolygon(brush, pointsRGB.ToArray()); // Dessiner le polygone
+                                            }
+                                        }
+
+                                        // Sauvegarder l'image avec le polygone sur le fond RGB
+                                        rgbImage.Save($@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_RGB{imageCount}.png");
+
+
                                         string maskPath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_60.png";
                                         Bitmap maskRead = new Bitmap(maskPath);
                                         // Parcourir chaque pixel du masque pour sauvegarder les coordonnées des pixels dans une liste
