@@ -8,6 +8,8 @@ using K4AdotNet.Record;
 using Microsoft.Azure.Kinect.BodyTracking;
 using Microsoft.Azure.Kinect.Sensor;
 
+string basePath = @"C:\Users\flori\OneDrive\Bureau\Kinect_folder";
+
 var mkvPath = $@"C:\Users\flori\OneDrive\Bureau\CHU_St_Justine\005-Device-0-04-05-2024-15-05-41.mkv";
 
 List<PointF> points = new List<PointF>(); // points pour tracer le polygone mais remis à zéro à chaque frame donc nouvelle liste pour écrire le fichier CSV
@@ -19,7 +21,7 @@ double area = 0;
 List<double> volumeList = new List<double>();
 List<double> meanDepthList = new List<double>();
 List<PointF> pointsCSV = new List<PointF>();
-string meanFilePath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\depth_means.csv";
+string meanFilePath = $@"{basePath}\depth_means.csv";
 
 string server = "127.0.0.1";  // Adresse IP de ton script Python
 int port = 5000;  // Port utilisé par le serveur socket côté Python
@@ -143,7 +145,7 @@ using (NetworkStream stream = client.GetStream())
                                                 g.FillPolygon(brush, points.ToArray()); // Dessiner le polygone
                                             }
                                         }
-                                        mask.Save($@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_{imageCount}.png");
+                                        mask.Save($@"{basePath}\mask_{imageCount}.png");
 
 
                                         // Créer un masque pour le polygone
@@ -153,7 +155,8 @@ using (NetworkStream stream = client.GetStream())
                                         // Get the color data
                                         byte[] colorData = new byte[colorImage.SizeBytes];
                                         colorImage.CopyTo(dst: colorData);
-                                        string rgbname = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\rgb.jpg";
+
+                                        string rgbname = $@"{basePath}\rgb.jpg";
                                         long imageBufferSize = colorImage.SizeBytes;
 
                                         using (FileStream fileObject = new FileStream(rgbname, FileMode.Create, FileAccess.Write))
@@ -177,10 +180,10 @@ using (NetworkStream stream = client.GetStream())
                                         }
 
                                         // Sauvegarder l'image avec le polygone sur le fond RGB
-                                        rgbImage.Save($@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_RGB{imageCount}.png");
+                                        rgbImage.Save($@"{basePath}\mask_RGB{imageCount}.png");
 
 
-                                        string maskPath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_60.png";
+                                        string maskPath = $@"{basePath}\mask_60.png";
                                         Bitmap maskRead = new Bitmap(maskPath);
                                         // Parcourir chaque pixel du masque pour sauvegarder les coordonnées des pixels dans une liste
                                         for (int y = 0; y < maskRead.Height; y++)
@@ -369,7 +372,7 @@ using (NetworkStream stream = client.GetStream())
                                                     g.FillPolygon(brush, points.ToArray()); // Dessiner le polygone
                                                 }
                                             }
-                                            mask.Save($@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_{imageCount}.png");
+                                            mask.Save($@"{basePath}\mask_{imageCount}.png");
 
 
                                         // Créer un masque pour le polygone
@@ -379,7 +382,7 @@ using (NetworkStream stream = client.GetStream())
                                         // Get the color data
                                         byte[] colorData = new byte[colorImage.SizeBytes];
                                         colorImage.CopyTo(dst: colorData);
-                                        string rgbname = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\rgb.jpg";
+                                        string rgbname = $@"{basePath}\rgb.jpg";
                                         long imageBufferSize = colorImage.SizeBytes;
 
                                         using (FileStream fileObject = new FileStream(rgbname, FileMode.Create, FileAccess.Write))
@@ -403,11 +406,11 @@ using (NetworkStream stream = client.GetStream())
                                         }
 
                                         // Sauvegarder l'image avec le polygone sur le fond RGB
-                                        rgbImage.Save($@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_RGB{imageCount}.png");
+                                        rgbImage.Save($@"{basePath}\mask_RGB{imageCount}.png");
 
 
 
-                                        string maskPath = $@"C:\Users\flori\OneDrive\Bureau\Kinect_folder\mask_60.png";
+                                        string maskPath = $@"{basePath}\mask_60.png";
                                             Bitmap maskRead = new Bitmap(maskPath);
                                             // Parcourir chaque pixel du masque pour sauvegarder les coordonnées des pixels dans une liste
                                             for (int y = 0; y < maskRead.Height; y++)
@@ -490,7 +493,7 @@ using (NetworkStream stream = client.GetStream())
     }
 
 // get current directory
-string currentDirectory = "C:\\Users\\flori\\OneDrive\\Bureau\\Kinect_folder";
+string currentDirectory = $@"{basePath}\Kinect_folder";
 // create a pos data file in the current directory
 string fileName = $@"{currentDirectory}\{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")}_posdata.csv";
 // create a header for the CSV file
