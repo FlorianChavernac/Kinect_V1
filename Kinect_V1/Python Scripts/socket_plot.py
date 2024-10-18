@@ -95,8 +95,8 @@ while flag:
 
         # Détecter les pics et creux dans les données filtrées
         y_filtered_array = np.array(y_filtered_data)
-        peaks, _ = find_peaks(y_filtered_data, distance=30)
-        troughs, _ = find_peaks(-y_filtered_data, distance=30)
+        peaks, _ = find_peaks(y_filtered_data, distance=30, width=30)
+        troughs, _ = find_peaks(-y_filtered_data, distance=30, width=30)
 
         # Mettre à jour les coordonnées des pics et des creux
         scatter_peaks.set_offsets(np.c_[np.array(x_data)[peaks], y_filtered_data[peaks]])
@@ -110,38 +110,39 @@ if peaks[0] < troughs[0]:
     peaks = peaks[1:]
 if peaks[-1] > troughs[-1]:
     peaks = peaks[:-1]
-#FR = (nombre de creux -1 )/ diviser par le temps écoulé entre le premier creux et le dernier creux multiplié par 60
-FR = (len(troughs) - 1) *60 / (x_data[troughs[-1]] - x_data[troughs[0]])
-
-#Calcul volume courant pour chaque respiration
-volume = []
-for i in range(2, len(troughs)+1, 1):
-    volume.append(y_filtered_data[peaks[i-2]] - y_filtered_data[troughs[i-1]])
-#Calcul volume courant moyen
-volume_moyen = sum(volume) / len(volume)
-
-#Calcul du volume minute expiré
-volume_minute = volume_moyen * FR
 
 
-# Créer une nouvelle fenêtre pour afficher la fréquence respiratoire
-freq_fig, freq_ax = plt.subplots()
-freq_ax.set_title('Constante respiratoire')
-freq_ax.axis('off')
+if len(peaks)+1== len(troughs):
+    #FR = (nombre de creux -1 )/ diviser par le temps écoulé entre le premier creux et le dernier creux multiplié par 60
+    FR = (len(troughs) - 1) *60 / (x_data[troughs[-1]] - x_data[troughs[0]])
 
-# Affichage de la fréquence respiratoire
-freq_ax.text(0.5, 0.5, f'Fréquence respiratoire: {FR:.2f} Rpm', fontsize=15, ha='center')
+    #Calcul volume courant pour chaque respiration
+    volume = []
+    for i in range(2, len(troughs)+1, 1):
+        volume.append(y_filtered_data[peaks[i-2]] - y_filtered_data[troughs[i-1]])
+    #Calcul volume courant moyen
+    volume_moyen = sum(volume) / len(volume)
 
-# Faire une boucle pour afficher les volumes courants de chaque respiration
-for i in range(len(volume)):
-    freq_ax.text(0.5, 0.4 - 0.05 * (i + 1), f'Volume courant {i + 1}: {volume[i]:.2f} mL', fontsize=15, ha='center')
+    #Calcul du volume minute expiré
+    volume_minute = volume_moyen * FR
 
-# Ajouter le volume courant moyen
-freq_ax.text(0.5, 0.4 - 0.05 * (len(volume) + 1), f'Volume courant moyen: {volume_moyen:.2f} mL', fontsize=15, ha='center')
+    # Créer une nouvelle fenêtre pour afficher la fréquence respiratoire
+    freq_fig, freq_ax = plt.subplots()
+    freq_ax.set_title('Constante respiratoire')
+    freq_ax.axis('off')
 
-# Ajouter le volume minute expiré
-freq_ax.text(0.5, 0.4 - 0.05 * (len(volume) + 2), f'Volume minute expiré: {volume_minute:.2f} mL/min', fontsize=15, ha='center')
+    # Affichage de la fréquence respiratoire
+    freq_ax.text(0.5, 0.9, f'Fréquence respiratoire: {FR:.2f} Rpm', fontsize=15, ha='center')
 
+    # Faire une boucle pour afficher les volumes courants de chaque respiration
+    for i in range(len(volume)):
+        freq_ax.text(0.5, 0.8 - 0.05 * (i + 1), f'Volume courant {i + 1}: {volume[i]:.2f} mL', fontsize=15, ha='center')
+
+    # Ajouter le volume courant moyen
+    freq_ax.text(0.5, 0.8 - 0.05 * (len(volume) + 1), f'Volume courant moyen: {volume_moyen:.2f} mL', fontsize=15, ha='center')
+
+    # Ajouter le volume minute expiré
+    freq_ax.text(0.5, 0.8 - 0.05 * (len(volume) + 2), f'Volume minute expiré: {volume_minute:.2f} mL/min', fontsize=15, ha='center')
 
 conn.close()
 plt.ioff()  # Désactiver le mode interactif
