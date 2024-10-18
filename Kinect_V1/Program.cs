@@ -8,6 +8,7 @@ using K4AdotNet.BodyTracking;
 using K4AdotNet.Record;
 using Microsoft.Azure.Kinect.BodyTracking;
 using Microsoft.Azure.Kinect.Sensor;
+using Microsoft.Win32;
 
 string basePath = @"C:\Users\flori\OneDrive\Bureau\Kinect_folder";
 
@@ -29,8 +30,7 @@ int port = 5000;  // Port utilisé par le serveur socket côté Python
 bool connected = false;
 
 // Chemin vers l'exécutable Python
-string pythonExePath = $@"C:\Users\flori\AppData\Local\Programs\Python\Python313\python.exe";
-// Chemin vers le script Python
+string pythonExePath = "python"; // fonctionne seulement si python est dans le path
 string scriptPath = $@"C:\Users\flori\source\repos\Kinect_V1\Kinect_V1\Python_scripts\socket_plot.py";
 
 // Créer un nouvel objet Process
@@ -38,8 +38,8 @@ ProcessStartInfo start = new ProcessStartInfo();
 start.FileName = pythonExePath;
 start.Arguments = scriptPath;
 start.UseShellExecute = false;
-start.RedirectStandardOutput = true;
-start.RedirectStandardInput = true;
+start.RedirectStandardOutput = false;
+start.RedirectStandardInput = false;
 start.CreateNoWindow = false;
 
 // Démarrer le processus
@@ -62,9 +62,28 @@ while (!connected)
             Console.WriteLine("1. Lire un fichier MKV (Playback)");
             Console.WriteLine("2. Faire un enregistrement en direct");
             string choix = Console.ReadLine();
+            //demander l'endroit où sauvegarder les fichiers
+            Console.WriteLine("Entrez le chemin où sauvegarder les fichiers :");
+            string userPath = Console.ReadLine();
+            if (userPath != "")
+            {
+                basePath = userPath;
+            }
+
+            if (!Directory.Exists(basePath))
+            {
+                Directory.CreateDirectory(basePath);
+            }
 
             if (choix == "1")
             {
+                //demander le chemin du fichier MKV
+                Console.WriteLine("Entrez le chemin du fichier MKV :");
+                string mkvuserPath = Console.ReadLine();
+                if (mkvuserPath != "")
+                {
+                    mkvPath = mkvuserPath;
+                }
                 // Playback mode
                 using (var playback = new Playback(mkvPath))
                 {
@@ -81,7 +100,7 @@ while (!connected)
                     // Utiliser la configuration (afficher certaines informations par exemple)
                     Console.WriteLine($"Depth Mode: {recordConfig.DepthMode}");
                     Console.WriteLine($"Color Resolution: {recordConfig.ColorResolution}");
-                    Console.WriteLine($"Color Resolution: {recordConfig.ColorFormat}");
+                    Console.WriteLine($"Color Format: {recordConfig.ColorFormat}");
 
 
                     // Déclaration de la variable pour stocker la capture
