@@ -132,6 +132,10 @@ using (NetworkStream stream = client.GetStream())
                                     if (imageCount == 60)
                                     {
                                         //Calcule l'aide du masque qu'une seule fois
+                                        float scaleFactor = 1.0f; // Agrandir de 20%
+                                        points = ScalePolygon(points, scaleFactor);
+                                        pointsRGB = ScalePolygon(pointsRGB, scaleFactor);
+
 
                                         // Créer un masque pour le polygone
                                         Bitmap mask = new Bitmap(width, height);
@@ -358,10 +362,14 @@ using (NetworkStream stream = client.GetStream())
                                     {
                                         if (imageCount == 60)
                                         {
-                                            //Calcule l'aide du masque qu'une seule fois
+                                        //Calcule l'aide du masque qu'une seule fois
+                                        //Calcule l'aide du masque qu'une seule fois
+                                        float scaleFactor = 1.0f; // Agrandir de 20%
+                                        points = ScalePolygon(points, scaleFactor);
+                                        pointsRGB = ScalePolygon(pointsRGB, scaleFactor);
 
-                                            // Créer un masque pour le polygone
-                                            Bitmap mask = new Bitmap(width, height);
+                                        // Créer un masque pour le polygone
+                                        Bitmap mask = new Bitmap(width, height);
                                             using (Graphics g = Graphics.FromImage(mask))
                                             {
                                                 g.Clear(Color.Black);  // Remplir l'image de noir (0)
@@ -492,10 +500,8 @@ using (NetworkStream stream = client.GetStream())
 
     }
 
-// get current directory
-string currentDirectory = $@"{basePath}\Kinect_folder";
 // create a pos data file in the current directory
-string fileName = $@"{currentDirectory}\{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")}_posdata.csv";
+string fileName = $@"{basePath}\{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")}_posdata.csv";
 // create a header for the CSV file
 string header = "Timestamp;ShoulderLeft_X;ShoulderLeft_Y;ShoulderLeft_Z;Neck_X;Neck_Y;Neck_Z;ShoulderRight_X;ShoulderRight_Y;ShoulderRight_Z;HipRight_X;HipRight_Y;HipRight_Z;HipLeft_X;HipLeft_Y;HipLeft_Z";
 
@@ -506,7 +512,7 @@ File.AppendAllText(fileName, string.Join(Environment.NewLine, skeletonPositionDa
 Console.WriteLine($"3D coordinates of joints have been saved in {fileName}");
 
 // Write 2D joint coordinates to a new CSV file
-string fileName2D = $@"{currentDirectory}\{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")}_posdata2D.csv";
+string fileName2D = $@"{basePath}\{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")}_posdata2D.csv";
 string header2D = "ShoulderLeft_X;ShoulderLeft_Y;Neck_X;Neck_Y;ShoulderRight_X;ShoulderRight_Y;HipRight_X;HipRight_Y;HipLeft_X;HipLeft_Y";
 File.WriteAllText(fileName2D, header2D + Environment.NewLine);
 using (StreamWriter sw2D = new StreamWriter(fileName2D, true))
@@ -551,4 +557,29 @@ static double CalculatePolygonArea(List<PointF> points)
     area += points[n - 1].X * points[0].Y - points[0].X * points[n - 1].Y;
 
     return Math.Abs(area) / 2;
+}
+
+static List<PointF> ScalePolygon(List<PointF> points, float scaleFactor)
+{
+    // Calculer le centre du polygone
+    float centerX = 0;
+    float centerY = 0;
+    foreach (var point in points)
+    {
+        centerX += point.X;
+        centerY += point.Y;
+    }
+    centerX /= points.Count;
+    centerY /= points.Count;
+
+    // Appliquer la mise à l'échelle
+    List<PointF> scaledPoints = new List<PointF>();
+    foreach (var point in points)
+    {
+        float scaledX = centerX + (point.X - centerX) * scaleFactor;
+        float scaledY = centerY + (point.Y - centerY) * scaleFactor;
+        scaledPoints.Add(new PointF(scaledX, scaledY));
+    }
+
+    return scaledPoints;
 }
